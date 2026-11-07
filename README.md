@@ -11,8 +11,6 @@ AI 自主渗透测试系统（Go 后端 + Next.js 前端）
 
 ---
 
----
-
 ## English
 
 **ARTEX** is an LLM multi-agent autonomous penetration testing platform: a single Go backend with an embedded Next.js UI, backed by PostgreSQL. Agents decompose goals on their own, execute real tools, and accumulate discovered assets and vulnerabilities into a graph as they go.
