@@ -5,11 +5,71 @@
 AI 自主渗透测试系统（Go 后端 + Next.js 前端）
 
 
-🌐 **在线 Demo**： [https://artex-demo.vercel.app/](https://artex-demo.vercel.app/)
+🌐 **Demo**: <https://artex-demo.vercel.app/> · English: [below](#english) · 中文: [原文](#中文文档原文未改动)
 
 </div>
 
 ---
+
+---
+
+## English
+
+**ARTEX** is an LLM multi-agent autonomous penetration testing platform: a single Go backend with an embedded Next.js UI, backed by PostgreSQL. Agents decompose goals on their own, execute real tools, and accumulate discovered assets and vulnerabilities into a graph as they go.
+
+> **Provenance.** The original upstream repository (`Autumn-27/ARTEX`) was deleted in October 2026 and its Docker image (`autumn27/artex`) was pulled. This repository is a faithful mirror of **v0.3.15** (the last open-source release, 2026-10-07) with the original commit history preserved, plus this English section. The application UI and the agents' internal prompts remain in Chinese — the reasoning prompts were never translated upstream (see the note on model choice below).
+
+### Capabilities
+
+- **Cyber-space mapping** — subdomain enumeration, port scanning, sensitive-information discovery, vulnerability scanning, distributed scan nodes.
+- **Autonomous exploration** — planner/worker multi-agent loop over a **dual-graph** model:
+  - *asset graph* (globally shared truth): `root_domain → subdomain → service → app → endpoint`
+  - *exploration graph* (per task): `goal → intent → fact / finding / hint`, linked by `spawns / derived_from / yields / proves` edges
+  - the two graphs are joined by **anchors**, which is what powers asset test-coverage views.
+- **Process-level worker exchange** — workers can search other workers' execution traces of the same task (`search_all_worker_traces`, `get_worker_trace`) so observations that were never recorded as facts are still reusable.
+- **Shared planner todo list** — multi-step exploitation chains (e.g. injection → credentials → lateral movement → privilege escalation) advance in dependency order across planner wake-ups instead of being fired in parallel.
+- **Operational plumbing** — traffic-recording MITM proxy with CA, tool approval / intercept gate (with model fallback approval), async DNS/HTTP enrichment, MCP support (Streamable HTTP or legacy SSE), skills, memory, reporting.
+- **Integrations** — asset sync from [ScopeSentry](https://github.com/Autumn-27/ScopeSentry); IM notifications (DingTalk, Feishu, WeCom, generic webhook, Telegram, email); vulnerability retesting agent.
+- **Self-update** — in-UI one-click update with SHA-256 verification, smoke test, and automatic rollback (`artex.old` / `artex.failed`).
+
+### Quick start (Docker Compose)
+
+```bash
+git clone https://github.com/marwanainaili2307-web/ARTEX-1.git
+cd ARTEX-1
+cp .env.example .env          # set POSTGRES_PASSWORD; optionally ANTHROPIC_API_KEY / OPENAI_API_KEY
+docker compose up -d          # pulls the artex image + postgres
+# -> http://localhost:8787    (first visit: /setup sets the admin password)
+```
+
+Requirements: Docker and Docker Compose (PostgreSQL is brought up by compose) and an LLM key for exploration. The image bundles common tooling (ripgrep, curl, vim, npm, nmap, ...); `./skills` and `./data` are bind-mounted and survive container recreation.
+
+Other install paths (detailed in the Chinese documentation below):
+
+- `./install.sh` — detects/installs Docker, then offers *all-in-Docker* or *local compile and run*.
+- **Prebuilt binaries** — download the release zip for your platform; launch with `start.sh` / `start.bat` (a supervisor required by the one-click updater), not `./artex` directly.
+- **Single binary from source** — static frontend export (`npm ci && npm run build:static`), copy `web/out` into `server/webui/dist`, then `CGO_ENABLED=0 go build -tags embedui -o artex ./cmd/artex`.
+
+### Configuration
+
+- **Database** — `config.json`, or override with `ARTEX_PG_DSN`.
+- **LLM** — `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` (or the UI's LLM settings page). Optional: `ARTEX_LLM_PROVIDER`, `ARTEX_LLM_MODEL`, `ARTEX_LLM_BASE_URL` (any OpenAI-compatible endpoint), `ARTEX_LLM_PROXY`.
+- **Model choice matters.** The internal reasoning prompts are Chinese and untranslated; use a capable frontier model. If you point `ARTEX_LLM_BASE_URL` at a small model, expect degraded reasoning and empty/truncated answers. Reasoning models may consume the whole `max_tokens` budget on internal thinking — raise `max_tokens` for those profiles. OpenAI-compatible endpoints cap output at 16,384 tokens, so keep that profile's `max_tokens` at or below 16,384.
+- **Concurrency** — number of worker agents per task, default 3 (System settings).
+- **Startup flags** — `./start.sh -addr :8787 -proxy :8788` (`-addr` = UI + API, `-proxy` = traffic-recording proxy). Default binds `127.0.0.1` only.
+- **Reverse proxy** — expose only 443. SSE is a long-lived stream: **proxy buffering must be disabled** or the activity feed appears stuck loading.
+
+### Legal notice — authorized use only
+
+ARTEX is an offensive tool powerful enough to carry an attack from reconnaissance through intrusion to data exfiltration with little human involvement. Use it **only** against systems you own or for which you have explicit written authorization, and only in isolated lab environments (OWASP Juice Shop, DVWA, ...). Unauthorized scanning, probing, or exploitation is a criminal offence in most jurisdictions.
+
+Context: in October 2026, Korean media reported that investigators linked upstream ARTEX to personal-data breaches targeting Korean financial institutions; the project was pulled from GitHub and Docker Hub shortly after. That is why the original is gone and why this mirror exists — read it as a defender. Usage restrictions and the disclaimer from the upstream author remain in force (see the license section below); all responsibility for use rests with the operator.
+
+This repository is licensed **AGPL-3.0**: derived works must stay open source, and if you modify ARTEX and serve it over a network, you must publish the corresponding complete source to those users.
+
+---
+
+## 中文文档（原文，未改动）
 
 ## 截图预览
 
